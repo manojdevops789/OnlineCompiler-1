@@ -94,7 +94,9 @@ async def reset_password_request(request: Request, db: Session = Depends(get_db)
     if "@" in identifier:
         success = send_reset_email(user.email, token)
         medium = "email"
-  
+    else:
+        success = False  # If you're not handling SMS yet
+        medium = "SMS"
 
     if success:
         return {"message": f"Password reset link has been sent to your {medium}."}
