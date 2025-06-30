@@ -1,34 +1,31 @@
 from sqlalchemy.orm import Session
-from models import User
-from schemas import SignupModel
-from passlib.hash import bcrypt
-from passlib.context import CryptContext
-from fastapi import HTTPException
 from sqlalchemy import or_
+from fastapi import HTTPException, status
+from passlib.context import CryptContext
+
+from models import User
+from schemas import SignupModel, UserResponseModel
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# ✅ Function to create user with email/mobile check
-def create_user(db: Session, user_data: SignupModel):
-    # Check if email already exists
+
+# ✅ Create user
+def create_user(db: Session, user_data: SignupModel) -> UserResponseModel:
     if db.query(User).filter(User.email == user_data.email).first():
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_409_CONFLICT,
             detail="Email already registered."
         )
 
-    # Check if mobile already exists
     if db.query(User).filter(User.mobile == user_data.mobile).first():
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_409_CONFLICT,
             detail="Mobile number already registered."
         )
 
-    # Hash the password before saving
     hashed_password = pwd_context.hash(user_data.password)
 
-    # Create and save new user
     db_user = User(
         name=user_data.name,
         email=user_data.email,
@@ -38,19 +35,22 @@ def create_user(db: Session, user_data: SignupModel):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return db_user
 
-# ✅ Function to return hashed password (utility)
-def get_password_hash(password: str):
+    return UserResponseModel(
+        id=db_user.id,
+        name=db_user.name,
+        email=db_user.email,
+        mobile=db_user.mobile
+    )
+
+
+# ✅ Password hash utility
+def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
-# ✅ Function to authenticate user during login
 
-
-from sqlalchemy import or_
-
-def authenticate_user(db: Session, identifier: str, password: str):
-    # Login using email or mobile only (both must be unique)
+# ✅ Authenticate user (returns full User)
+def authenticate_user(db: Session, identifier: str, password: str) -> User | None:
     user = db.query(User).filter(
         or_(User.email == identifier, User.mobile == identifier)
     ).first()
@@ -58,4 +58,3 @@ def authenticate_user(db: Session, identifier: str, password: str):
     if user and pwd_context.verify(password, user.password):
         return user
     return None
-

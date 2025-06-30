@@ -1,20 +1,29 @@
 import smtplib
+import os
+import logging
+from dotenv import load_dotenv
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import os
-from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables from .env file
+# ✅ Load environment variables
+load_dotenv()
+
+# ✅ Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# ✅ Configurable frontend URL for reset link
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 def send_reset_email(to_email: str, token: str) -> bool:
     sender_email = os.getenv("EMAIL_ADDRESS")
     sender_password = os.getenv("EMAIL_APP_PASSWORD")
 
     if not sender_email or not sender_password:
-        print("❌ Email credentials not set in environment")
+        logger.error("❌ Email credentials not set in environment")
         return False
 
-    reset_link = f"http://localhost:3000/reset-password/{token}"
+    reset_link = f"{FRONTEND_URL}/reset-password/{token}"
 
     message = MIMEMultipart("alternative")
     message["Subject"] = "Password Reset Request"
@@ -25,7 +34,7 @@ def send_reset_email(to_email: str, token: str) -> bool:
     <html>
       <body>
         <p>Hi,<br>
-           You requested a password reset of the Online Compiler.<br><br>
+           You requested a password reset for your account.<br><br>
            <a href="{reset_link}">Click here to reset your password</a><br><br>
            This link is valid for 30 minutes.
         </p>
@@ -40,8 +49,8 @@ def send_reset_email(to_email: str, token: str) -> bool:
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, to_email, message.as_string())
         server.quit()
-        print(f"✅ Email sent to {to_email}")
+        logger.info(f"✅ Email sent to {to_email}")
         return True
     except Exception as e:
-        print("❌ Failed to send email:", e)
+        logger.error(f"❌ Failed to send email: {e}")
         return False

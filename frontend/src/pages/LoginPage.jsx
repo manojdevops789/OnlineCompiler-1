@@ -13,27 +13,28 @@ const LoginPage = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    setError('');
 
-  // Clear previous messages
-  setError('');
+    try {
+      const res = await API.post('/login', formData);
 
-  try {
-    const res = await API.post('/login', formData);
+      // ✅ Check for valid user object
+      if (res.data && res.data.email) {
+        console.log("Login successful:", res.data);
 
-    if (res.data.success) {
-      setError('');  // Clear any previous error
-      console.log("Login successful:", res.data);
-      navigate('/dashboard');
-    } else {
-      setError('Invalid credentials');
+        // Optionally store user in localStorage
+        localStorage.setItem('user', JSON.stringify(res.data));
+
+        navigate('/dashboard');
+      } else {
+        setError('Invalid credentials');
+      }
+    } catch (err) {
+      console.error("Login error:", err.response);
+      setError(err.response?.data?.detail || 'Login failed');
     }
-  } catch (err) {
-    console.error("Login error:", err.response);
-    setError(err.response?.data?.detail || 'Login failed');
-  }
-};
-
+  };
 
   const handleRipple = (e) => {
     const button = e.currentTarget;
@@ -64,7 +65,7 @@ const LoginPage = () => {
         <form onSubmit={handleSubmit}>
           <input
             name="identifier"
-            placeholder="Email"
+            placeholder="Email or Mobile"
             value={formData.identifier}
             onChange={handleChange}
             required
